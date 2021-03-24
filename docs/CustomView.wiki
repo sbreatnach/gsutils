@@ -1,0 +1,82 @@
+== Custom Views ==
+
+GSUtils offers a small set of customisable views in the few areas where the
+iOS SDK is lacking.
+
+=== Imports ===
+{{{
+#!objectivec
+#import "GSCustomTableViewCell.h"
+}}}
+
+=== GSCustomTableViewCell ===
+
+==== Introduction ====
+
+Apple currently offer three methods of customising table view cells:
+
+# Create a standard {{{UITableViewCell}}} and setting the default properties.
+# Create a Nib file with the table view as File Owner, link to an IBOutlet
+named {{{cell}}} in the table view and reuse this cell instance.
+# Inherit from {{{UITableViewCell}}} class and implement a custom
+{{{-drawRect:}}}.
+
+In a number of cases these options are suitable, but not all. The first two
+options will create a significant amount of code duplication if you find
+yourself using the same design for a cell in multiple, separate table views.
+And the third option could be considered overkill for a simple table view cell.
+
+Hence, {{{GSCustomTableViewCell}}}, which can be used in much the same way as
+when creating a custom UIView or other view objects.
+
+==== Usage ====
+
+**NB:** Xcode 4+ is required to use this class. Older versions of Interface Builder do
+not find the IBOutlets correctly.
+# Create a custom subclass of GSCustomTableViewCell.
+# Create a Nib with a table view cell as the only root object.
+# Make the File Owner for the Nib the subclass and connect the {{{cell}}}
+IBOutlet
+to the root table view cell (which is defined in {{{GSCustomTableViewCell}}}).
+# Customise the Nib and connect to IBOutlets and IBActions as needed in the
+custom subclass
+# When creating the custom subclass in the table view data source code,
+initialise with the {{{-initWithNibName:bundle:}}} message. The Nib name set
+here would be the Nib linked as File Owner of the subclass.
+
+The message {{{+customReuseIdentifier}}} returns the default reuse identifier
+used. Any other reuse identifier can be used by implementing the
+message in the subclass.
+
+It is recommended to implement the {{{+cell}}} message in the subclass to
+quickly and easily create autoreleased instances of the cell.
+
+Data Source example:
+{{{
+#!objectivec
+- (UITableViewCell *)tableView:(UITableView *)tableView
+         cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    EXMessageTableViewCell *cell = (EXMessageTableViewCell*)
+    [tableView dequeueReusableCellWithIdentifier:
+     [EXMessageTableViewCell customReuseIdentifier]];
+    if (cell == nil)
+    {
+        cell = [EXMessageTableViewCell cell];
+    }
+    
+    // Configure the cell for the outbox message at this index
+    EXMessage *inboxMessage = [_inbox messageAtIndex:[indexPath row]];
+    cell.messageLabel.text = inboxMessage.message.text;
+    cell.senderLabel.text = inboxMessage.sender;
+    
+    return cell;
+}
+
+}}}
+
+==== Future Changes ====
+
+The biggest limitation would be the lack of flexibility with regards to the
+reuse identifier. Perhaps use a new designated initialiser that can set the
+reuse identifier.

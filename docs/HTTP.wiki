@@ -1,0 +1,165 @@
+== HTTP Asynchronous Request/Response ==
+
+Apple's default networking SDK is powerful but rather low-level. For most
+projects, such flexibility is not needed: we just want to download an image
+or send form data.
+
+A number of open-source libraries exist that offer that
+high-level usage. Facebook's [[http://three20.info/|Three20]] and
+AllSeeing-I's [[http://allseeing-i.com/ASIHTTPRequest/|ASIHTTPRequest]] both
+have this.
+
+The HTTP library of GSUtils is another such offering, this time
+using an interface that would be familiar to anybody who has developed for
+[[http://www.djangoproject.com/|Django]], a popular Python web framework.
+
+=== Features ===
+
+* Always asynchronous.
+* Supports GET, POST and PUT.
+* Can send form data, including files.
+* Cookies are retained and stored automatically.
+* Request headers are fully modifiable.
+
+=== Imports ===
+{{{
+#!objectivec
+#import "GSServerController.h"
+#import "GSHTTPRequest.h"
+#import "GSHTTPResponse.h"
+#import "GSMultiValueDictionary.h"
+}}}
+
+=== Basic Usage ===
+
+{{{
+#!objectivec
+- (void)sendRequest
+{
+    GSHTTPRequest *request = [GSHTTPRequest request];
+    request.host = @"www.google.com";
+    request.method = @"GET";
+    [[GSServerController sharedInstance] sendAsyncRequest:request
+                                               withTarget:self
+                                            andActionName:@"handleResponse:"];
+}
+
+- (void)handleResponse:(GSHTTPResponse*)response
+{
+    if( response.statusCode == 200 )
+    {
+        NSString *stringData = [response stringContent];
+    }
+}
+
+}}}
+
+* The above code will retrieve http://www.google.com/ asynchronously and
+return the response.
+* The response's {{{statusCode}}} property contains the HTTP error or the
+system error if the connection failed.
+
+=== Simple GET ===
+
+{{{
+#!objectivec
+- (void)sendRequest
+{
+    GSHTTPRequest *request = [GSHTTPRequest request];
+    request.host = @"www.google.com";
+    request.path = @"/search";
+    request.method = @"GET";
+    [request.GET setObject:@"gsutils" forKey:@"q"];
+    [[GSServerController sharedInstance] sendAsyncRequest:request
+                                               withTarget:self
+                                            andActionName:@"handleResponse:"];
+}
+
+- (void)handleResponse:(GSHTTPResponse*)response
+{
+    if( response.statusCode == 200 )
+    {
+        NSString *stringData = [response stringContent];
+    }
+}
+
+}}}
+
+* Retrieves http://www.google.com/search?q=gsutils and reads the response.
+* The leading / in the path MUST be set - strict handling of input always
+occurs.
+
+=== Simple POST ===
+
+{{{
+#!objectivec
+- (void)sendRequest
+{
+    GSHTTPRequest *request = [GSHTTPRequest request];
+    request.isSecure = YES;
+    request.method = @"POST";
+    request.host = @"www.google.com";
+    request.path = @"/accounts/ServiceLoginAuth";
+    [request.POST setObject:@"silly" forKey:@"username"];
+    [request.POST setObject:@"monkey" forKey:@"password"];
+    [[GSServerController sharedInstance] sendAsyncRequest:request
+                                               withTarget:self
+                                            andActionName:@"handleResponse:"];
+}
+
+- (void)handleResponse:(GSHTTPResponse*)response
+{
+    if( response.statusCode == 302 )
+    {
+        NSString *newLocation = [response.HEADERS objectForKey:@"Location"];
+    }
+}
+
+}}}
+
+* Makes a login attempt to Google account at URL
+https://www.google.com/accounts/ServiceLoginAuth with username and password
+in POST.
+* The URL is flagged to use HTTPS with the {{{isSecure}}} property.
+* If the login is successful, a redirect status code will return. The redirect
+URL should be stored in the {{{Location}}} header.
+
+=== Form File Upload ===
+
+{{{
+#!objectivec
+- (void)sendRequest
+{
+    GSHTTPRequest *request = [GSHTTPRequest request];
+    request.host = @"www.example.com";
+    request.method = @"POST";
+    request.path = @"/form/image/upload/";
+    GSFile *file = [GSFile fileFromPath:@"temp.png"];
+    if( file != nil )
+    {
+        [request.FILES setObject:file forKey:@"image"];
+    }
+    [request.POST setObject:@"Useless" forKey:@"imagename"];
+    [request.GET setObject:[NSNumber numberWithInt:1] forKey:@"version"];
+    [[GSServerController sharedInstance] sendAsyncRequest:request
+                                               withTarget:self
+                                            andActionName:@"handleResponse:"];
+}
+
+- (void)handleResponse:(GSHTTPResponse*)response
+{
+    if( response.statusCode == 200 )
+    {
+        NSDictionary *responseData = [response jsonContent];
+    }
+}
+
+}}}
+
+* Uploads the file temp.png with the key image and data Useless with key
+imagename to the URL http://www.example.com/form/image/upload/?version=1
+* If the file doesn't exist, the GSFile instance is nil and no file will be
+sent.
+* Any value may be set as the objects for GET and POST, providing they are NSString instances **or** support the {{{-stringValue}}} informal protocol
+* The response is assumed to be valid JSON representing a map and is returned
+as a NSDictionary.

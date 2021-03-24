@@ -1,0 +1,15 @@
+*~
+*.bin
+*.obj
+*.pyc
+.DS_Store
+nosetests.xml
+*.po
+*.class
+*.mode1v3
+*.pbxuser
+*.pch
+*.datastore
+*.xcworkspacedata
+*.xcuserstate
+*.xcscheme

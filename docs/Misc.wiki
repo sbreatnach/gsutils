@@ -1,0 +1,59 @@
+== Miscellaneous ==
+
+As well as the core libraries, there are an additional set of various functionality, a grab-bag of goodness, if you will. None of it is original code - all is taken from various locations and projects on the internet. Attribution and licensing, where different from the GSUtils contributors, is specified.
+
+=== Imports ===
+{{{
+#!objectivec
+#import "GSNSData+Base64.h"
+#import "GTMNSObject+KeyValueObserving.h"
+#import "GSNSMutableDictionary+Utilities.h"
+#import "GSNSURL+URLUtilities.h"
+}}}
+
+=== Key-Value Observing ===
+
+Taken from Google's Toolbox For Mac (GTM) [[http://code.google.com/p/google-toolbox-for-mac/|project]].
+
+This allows for straightforward Key-Value observing, without the pitfalls of Apple's original implementation. See the [[http://www.mikeash.com/pyblog/key-value-observing-done-right.html|blog post]] from Mike Ash for more details.
+
+It's beyond the scope of this documentation to cover what KVO precisely does. To put it simply: it's a tightly coupled method of following the Observer design pattern. For most cases, it's not needed. {{{NSNotificationCenter}}} offers a far more flexible and loosely coupled method. If you absolutely must use KVO though, use the GTM approach.
+
+Example:
+{{{
+#!objectivec
+- (void)dealloc
+{
+    [self.message gtm_removeObserver:self
+                           forKeyPath:@"read"
+                             selector:@selector(messageRead:)];
+    [super dealloc];
+}
+
+- (id)init
+{
+    self = [super init];
+    if( self != nil )
+    {
+        [self.message gtm_addObserver:self
+                            forKeyPath:@"read"
+                              selector:@selector(messageRead:)
+                              userInfo:nil
+                               options:NSKeyValueObservingOptionNew];
+    }
+    return self;
+}
+
+- (void)messageRead: (GTMKeyValueChangeNotification*)notification
+{
+    NSDictionary *changeDict = [notification change];
+}
+}}}
+
+=== NSData Extensions ===
+
+The default NSData implementation has no direct API for converting to Base64 or other string representations. Included here are some handy conversion messages. Most of this was taken from Matt Gallagher's NSData [[http://cocoawithlove.com/2009/06/base64-encoding-options-on-mac-and.html|extensions]].
+
+=== Other Extensions ===
+
+See the header files for descriptions of the additional utility messages.

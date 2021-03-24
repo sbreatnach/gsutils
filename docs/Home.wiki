@@ -1,0 +1,137 @@
+== Introduction ==
+
+**GSUtils** is a collection of handy and practical library classes and macros
+for iOS development.
+
+Why use GSUtils? Because it is licenced under one of the most permissive
+licences, the BSD licence, and because it's got some good stuff that isn't
+easy to find open-sourced.
+
+=== [[Store|In-App Purchasing]] ===
+
+{{{GSStore}}} defines a generic in-application store which contains products and
+the ability to purchase said products. The implementation wraps the standard
+Apple library into a simple interface. An implementer must subclass to
+use custom products and handle store responses. {{{GSStoreProduct}}} encapsulates
+the product and data about the product. {{{GSStoreTransaction}}} defines the 
+transaction in the store and the receipt information.
+
+=== [[CustomView|Custom Views]] ===
+
+{{{GSTableViewCell}}} offers an alternative to the standard methods of creating
+custom table view cells. Using this class, you may design the cell in the same
+fashion as a {{{UIView}}} or other standard view classes: a Nib and a custom File
+Owner class.
+
+=== [[DataStructures|Data Structures]] ===
+
+==== Directed Graph ====
+
+The standard Apple libraries do not offer any graph data structures and other
+open-source libraries fall short in this regard also. Hence, the classes
+defined in this library: {{{GSDirectedGraph}}} and {{{GSGraphNode}}}. 
+See [[http://en.wikipedia.org/wiki/Directed_graph|Wikipedia]] for more details
+on what a directed graph is.
+{{{GSDirectedGraph}}} offers some basic traversal and manipulation of a directed
+graph, and the {{{GSGraphNode}}} allows for containing objects within the graph.
+
+==== Multi-value Dictionary ====
+
+{{{NSDictionary}}} offers single key/value pairings. For most situations, this is
+more than adequate. But for HTTP handling, where more than one value can be
+set per key in a GET query string, it is insufficient. 
+{{{GSMultiValueDictionary}}} allows usage
+as both a standard dictionary and extending it to allow for multiple values
+per key.
+
+=== [[HTTP|HTTP]] ===
+
+There are a number of quality libraries out there for asynchronous HTTP
+request/response. What makes GSUtils approach better? Nothing much :)
+But, it does offer an interface much like what is offered in [[http://docs.djangoproject.com/en/1.2/ref/request-response/|Django]], if this appeals.
+
+{{{GSServerController}}} is a singleton class that manages all requests and
+responses. {{{GSHTTPRequest}}} contains the client request data - it is the client
+code responsibility to populate this class. {{{GSHTTPResponse}}} contains the
+response to the request. It is populated and returned to the client code via
+a simple asynchronous callback.
+
+=== [[Json|JSON]] ===
+
+Stig Brautaset's [[http://stig.github.com/json-framework/|JSON Framework]] is
+used extensively in GSUtils, hence the dependency (see below). But GSUtils also
+contains additional expansions to it for serialisation of custom classes.
+
+If a class implements the {{{GSJsonSerializable}}} protocol, it can be used in
+conjunction with {{{GSJsonParser}}} and {{{GSJsonWriter}}} to allow for
+automatic serialisation/deserialisation of classes written and parsed.
+
+=== [[Files|File Management]] ===
+
+The {{{GSFileManager}}} offers a simple interface with shortcuts for accessing and
+modifying files in standard iOS locations. Also, the {{{GSFile}}} class is used for
+POSTing files using the HTTP interface.
+
+=== [[Misc|Miscellaneous]] ===
+
+==== Standard Library Extensions ====
+There are a number of useful category extensions defined for
+{{{NSMutableDictionary}}} and {{{NSURL}}}. Also, there are a couple of powerful extensions
+brought from outside sources: GoogleToolboxForMac's [[http://code.google.com/p/google-toolbox-for-mac|KVO additions]]
+and Matt Gallagher's NSData [[http://cocoawithlove.com/2009/06/base64-encoding-options-on-mac-and.html|Base64 extensions]].
+
+==== Logging ====
+
+Handy logging macros are included in {{{GSLogging}}}. These were taken
+from a StackOverflow [[http://stackoverflow.com/questions/969130/nslog-tips-and-tricks|post]].
+
+== Installation ==
+
+=== Dependencies ===
+
+* Mac OS X (v10.6, v10.7 tested).
+* Xcode (v3.2.5, v3.2.6, v4.0, v4.1 tested).
+* SBJson (v3.0 tested). [[http://stig.github.com/json-framework/|Source]].
+
+=== Project Setup ===
+
+The following are the steps for Xcode 4. There is some variation in Xcode 3.2.*
+
+# {{{hg clone https://bitbucket.org/sbreatnach/gsutils}}}
+# Download and extract SBJson
+# In Xcode preferences, set a new **Source Tree** value {{{JSONLIB_SRC}}}. This must
+point to the full path where SBJson has been extracted.
+# Add another **Source Tree** value {{{GSUTILS_SRC}}}. This must point to the clone
+destination of the GSUtils repository.
+# Click and drag the gsutils.xcodeproj file into the root of your project in Xcode.
+# Select the **Build Settings** for your project and add to the **User Header
+Search Paths** the value {{{$(GSUTILS_SRC)}}} with recursive flag set.
+# Select the **Target** for your project, add a new row to **Link Binary With
+Libraries** and select {{{libgsutils.a}}} from the list.
+# If using any of the category extensions, set **Other Linker Flags** for your Target configuration(s) to include {{{-all_load}}}
+# Compilation and linking should now function correctly.
+
+==== Install Notes ====
+
+As GSUtils depends on SBJson, it is linked with SBJson at compile time. If your
+own project has a separate dependency on SBJson, this can cause duplicate symbol
+errors when linking. To avoid this, there are two options: 
+
+* Prevent SBJson from linking your project and compile against the headers of 
+the version GSUtils uses. How this is done is project dependent.
+
+* Edit the GSUtils project as follows (in Xcode 4+):
+## Select gsutils.xcodeproject -> Project gsutils -> Build Settings -> 
+Other Linker Flags and remove the -all_load option
+## Select gsutils.xcodeproject -> Target gsutils -> Build Phases -> 
+Link Binary With Libraries and remove the libsbjson-ios.a row.
+
+=== Library Usage ===
+
+* [[Store|In-App Purchasing]]
+* [[CustomView|Custom Views]]
+* [[DataStructures|Data Structures]]
+* [[HTTP|HTTP Asynchronous Request/Response]]
+* [[Files|File Management]]
+* [[Json|Custom JSON Extensions]]
+* [[Misc|Miscellaneous]]

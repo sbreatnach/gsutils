@@ -1,0 +1,131 @@
+== In-App Purchasing ==
+
+In-app purchasing is the system by which your users can buy something from you
+inside the application. The library has been used with non-consumable products
+but consumable products should work fine also.
+
+There are a number of steps you need to take before your app will fully work
+with in-app purchasing. It's beyond the scope of this documentation to cover
+most of these steps. Read Apple's extremely verbose [[http://developer.apple.com/library/ios/#documentation/NetworkingInternet/Conceptual/StoreKitGuide/Introduction/Introduction.html#//apple_ref/doc/uid/TP40008267|documentation]]
+for more detailed information.
+
+All these classes offer is a clean abstraction of the Apple Store interactions
+in the codebase. So, assuming we have our application and products configured
+with Apple, here is some basic code.
+
+=== Imports ===
+{{{
+#!objectivec
+#import "GSStore.h"
+#import "GSConstants.h"
+#import "GSStoreProduct.h"
+#import "GSStoreTransaction.h"
+}}}
+
+=== Initialisation ===
+
+{{{
+#!objectivec
+NSSet *productIds = [NSSet setWithObjects:@"productID1", @"productID2", nil];
+EXStore *store = [[EXStore alloc] init];
+if( [store supported] )
+{
+    store.productIds = productIds;
+    [store requestProductData];
+}
+
+}}}
+
+{{{EXStore}}} is a subclass of {{{GSStore}}}. It has a set of product IDs that
+are used for retrieving product data and making product purchases. In certain
+cases, IAP is not available (disabled via parental controls, simulator, etc.).
+In these cases, the {{{supported:}}} message will return NO.
+
+{{{EXStore}}} must define the callback {{{-productDataRetrieved:}}}, which
+will be invoked when the response from {{{-requestProductData}}} returns.
+
+The callback will be passed a {{{NSDictionary}}} instance named {{{userInfo}}}.
+{{{userInfo}}} contains the success/failure flag and the {{{NSError}}} instance
+if the request failed (with the dictionary key {{{GS_DK_Error}}}).
+
+Example:
+{{{
+#!objectivec
+- (void)productDataRetrieved:(NSDictionary *)userInfo
+{
+    BOOL dataReceived = [[userInfo objectForKey:GS_DK_Success] boolValue];
+    if( dataReceived )
+    {
+        [[NSNotficationCenter defaultCenter]
+         postNotificationName:@"ProductDataReceived" object:self];
+    }
+}
+
+}}}
+
+If the callback is flagged successful, then {{{EXStore}}}'s {{{products}}}
+property will contain an array of {{{GSStoreProduct}}} instances. These
+define the localized title, description and price of each product.
+
+=== Purchase ===
+
+{{{
+#!objectivec
+[store purchaseProductId:@"productID1"];
+
+}}}
+
+
+This initiates the purchase transaction. The first part, where the user enters
+their iTunes account data, is hidden to the application. Whatever the user
+does, the transaction is returned and passed into {{{EXStore}}}'s callback
+{{{-finishTransaction:(GSStoreTransaction*)}}}.
+
+By default, the callback simply completes the transaction, whether the user
+purchased successfully or not. But it is recommended that the subclass
+override the default implementation.
+
+Example:
+{{{
+#!objectivec
+- (void)finishTransaction:(GSStoreTransaction *)transaction
+{
+    [transaction finish];
+    NSDictionary *userInfo = [NSDictionary dictionaryWithObjectsAndKeys:
+                              [NSNumber numberWithBool:transaction.successful],
+                              @"success",
+                              transaction, @"transaction",
+                              nil];
+    [[NSNotificationCenter defaultCenter]
+     postNotificationName:@"TransactionComplete" object:self
+     userInfo:userInfo];
+}
+
+}}}
+
+{{{GSStoreTransaction}}} contains the transaction information and offers the
+receipt data for possible server-side verification.
+
+Whether the product was bought or not by the user, the transaction is always
+returned. It is up to the client code to handle users cancelling purchases.
+
+The transaction remains on the transaction queue until the {{{-finish}}}
+message is sent to the object.
+
+=== Customisation ===
+
+Subclassing GSStore opens up a number of possibilities regarding customisation
+of how it is used.
+
+For example, if you are selling a map pack for your game,
+a {{{MapPack}}} could be defined that contains an instance of
+{{{GSStoreProduct}}} and a corresponding {{{-buyMapPack:(MapPack*)}}} message
+in the custom subclass.
+
+This way, the abstraction becomes even cleaner between
+the Apple-specific functionality and your application's functionality.
+
+=== Future Changes ===
+
+Handle restoration of transactions from the transaction queue.
+Does it support subscriptions? How could it be expanded to support them?

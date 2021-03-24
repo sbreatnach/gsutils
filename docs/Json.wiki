@@ -1,0 +1,77 @@
+== JSON ==
+
+GSUtils uses [[http://stig.github.com/json-framework/|SBJson]] in a number of 
+locations but also offers some additional functionality.
+
+Specifically, if a class conforms correctly to the protocol {{{GSJsonSerializable}}}, it can be serialised and deserialised for sending via HTTP or storing to disk.
+
+=== Imports ===
+{{{
+#!objectivec
+#import "GSJsonSerializable.h"
+#import "GSJsonParser.h"
+#import "GSJsonWriter.h"
+}}}
+
+=== GSJsonSerializable ===
+
+This protocol defines two required messages:
+* {{{-(NSDictionary*)jsonData}}}
+* {{{-(void)loadJsonData:(NSDictionary*)}}}
+
+{{{-jsonData}}} must return an {{{NSDictionary}}} that contains the serialised data of the class, plus one required key as defined in {{{GSConstants.h}}}: {{{GS_DK_Class}}}. The value for the key must be the string of the class name e.g. @"EXStore", @"EXMessage".
+
+{{{-loadJsonData}}} takes a dictionary that contains the serialised data of the class and initialises the class instance using the data.
+Both messages should be reciprocal though this is up to the implementer.
+
+=== Parsing ===
+
+{{{GSJsonParser}}} is a subclass of the standard {{{SBJsonParser}}} that comes with JSON Framework. It extends the functionality of the original class to look for dictionaries that have the key {{{GS_DK_Class}}}.
+
+If the key is found, the dictionary is assumed to describe a class that has been serialised with the {{{GSJsonSerializable}}} protocol and attempts to allocate and initialise an instance of the class with the {{{-loadJsonData}}} message.
+
+Note that this class initialisation is a depth-first recursive traversal of the JSON textual data, so child {{{GSJsonSerializable}}} classes within {{{GSJsonSerializable}}} parent classes are already converted to their class representation by the time the parent conversion occurs.
+
+The {{{GSHTTPResponse}}} message {{{-jsonContent}}} uses this functionality.
+
+Example:
+{{{
+#!objectivec
+- (void)loadJsonData:(NSDictionary *)jsonData
+{
+    self.components = [jsonData objectForKey:@"components"];
+    self.purchased = [[jsonData objectForKey:@"purchased"] boolValue];
+}
+}}}
+
+=== Writing ===
+
+When JSON data is written using the {{{GSJsonWriter}}} class, which is a subclass of the 
+standard {{{SBJsonWriter}}}, it supports the core classes as defined in JSON Framework. In addition, it supports writing of classes that conform to the {{{GSJsonSerializable}}} protocol. 
+
+If a class does conform, {{{-jsonData}}} is sent to retrieve the dictionary and that dictionary is written in place of the class. Note that the class, if it contains class data that conforms to {{{GSJsonSerializable}}}, must send the {{{-jsonData}}} message where required.
+
+The resulting dictionary must be JSON-compatible i.e. contain only data that can be written by {{{SBJsonWriter}}}.
+
+Note that, unlike {{{-jsonContent}}} in {{{GSHTTPResponse}}}, there is no corresponding automatic creation of formatted JSON in {{{GSHTTPRequest}}}.
+
+Example:
+{{{
+#!objectivec
+- (NSDictionary*)jsonData
+{
+    NSMutableDictionary *jsonData = [NSMutableDictionary
+                                     dictionaryWithObject:@"EXCollection"
+                                     forKey:GS_DK_Class];
+    NSMutableArray *components = [NSMutableArray arrayWithCapacity:
+                                  [self.components count]];
+    for( CPComponent *component in self.components )
+    {
+        [components addObject:[component jsonData]];
+    }
+    [jsonData setObject:components forKey:@"components"];
+    [jsonData setObject:[NSNumber numberWithBool:self.purchased]
+                 forKey:@"purchased"];
+    return jsonData;
+}
+}}}

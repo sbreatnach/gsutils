@@ -1,0 +1,56 @@
+== File Management ==
+
+GSUtils offers both an abstraction of the underlying file management but also simple
+shortcuts for common file locations. As all iPhone applications run under a sandbox,
+they each have their own allocated file directories. A select number of directories are
+writable. See this Stack Overflow [[http://stackoverflow.com/questions/1567134/how-can-i-get-a-writable-path-on-the-iphone|post]]
+for more details.
+
+{{{GSFile}}} is used primarily for HTTP file uploads but may also be used as a container
+of file data in client code. It is not used directly by {{{GSFileManager}}}.
+
+{{{GSFileManager}}} offers a simple interface for a number of standard directories:
+* Resource - read access only, it points to the directory containing all bundled code
+and resources.
+* Library - read/write access, this location is recommended for non-user accessible files
+such as configuration files.
+* Temporary - read/write access, the temporary directory should be used for temporary
+files only as it is regularly cleaned up by the iPhone subsystems, external to your application.
+
+=== Temporary File ===
+{{{
+#!objectivec
+NSData *content = [NSData data];
+NSString *fileName = @"temp.png";
+NSString *filePath = [[GSFileManager sharedInstance]
+                       temporaryPath:fileName];
+if( filePath != nil )
+{
+    [[GSFileManager sharedInstance] writeFilePath:filePath
+                                         withData:content];
+}
+}}}
+* Writes a temporary file initially named temp.png with the empty data given.
+* The {{{-temporaryPath}}} message may not return a file name named temp.png. If the file exists, the filename is modified until no such filename exists in the temporary directory.
+* In other words, the path from {{{-temporaryPath}}} is guaranteed to be unique.
+* Any failures are quiet, so check path after write with message {{{-pathExists:}}} if needed.
+
+=== Library/Resource Check ===
+{{{
+#!objectivec
+NSData *filedata = nil;
+NSString *fileName = @"config.xml"
+if( [[GSFileManager sharedInstance]
+     hasLibraryFile:fileName] )
+{
+    fileData = [[[GSFileManager sharedInstance] readLibraryFile:
+                 fileName] retain];
+}
+else
+{
+    fileData = [[[GSFileManager sharedInstance] readResourceFile:
+                 fileName] retain];
+}
+}}}
+* Reads from the library directory first. If the file doesn't exist, read from the application bundle instead.
+* All errors are silent, so {{{fileData}}} will be nil if the code fails.

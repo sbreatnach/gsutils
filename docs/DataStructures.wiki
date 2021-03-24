@@ -1,0 +1,98 @@
+== Data Structures ==
+
+The data structures available by default are very good and will be more than
+adequate for most uses. But there are some gaps, particular with specialised
+data structures, such as trees and stacks.
+[[http://cocoaheads.byu.edu/code/CHDataStructures|CHDataStructures]] defines
+most of the esoteric data structures a programmer would need. GSUtils contains
+more such data structures.
+
+=== Imports ===
+{{{
+#!objectivec
+#import "GSDirectedGraph.h"
+#import "GSGraphNode.h"
+#import "GSMultiValueDictionary.h"
+}}}
+
+=== Directed Graph ===
+
+Directed graphs essentially offer a group of nodes with connections between
+each node. Each connection has a direction, effectively a parent/child
+relation between the start connection and the end connection. Cycles are
+allowed in directed graphs, so a connection from node A to node B
+and another connection from node B to node A is perfectly valid.
+
+See [[http://en.wikipedia.org/wiki/Directed_graph|Wikipedia]] for more details.
+
+GSGraphNode represents a node in the graph. It contains the parent/child
+relations (or directed edges, to use different terminology) of the graph.
+Also, each GSGraphNode has a property object which defines the contained
+object of the node.
+GSDirectedGraph contains all nodes in the graph and offers a simple interface
+to traversing and manipulating the graph.
+
+==== Creating a graph ====
+
+{{{
+#!objectivec
+GSGraphNode *rootNode = [GSGraphNode node];
+GSGraphNode *subNode = [GSGraphNode node];
+[subNode addChild:[GSGraphNode node]];
+[rootNode addChild:subNode];
+[rootNode addChild:[GSGraphNode node]];
+
+GSDirectedGraph *graph = [GSDirectedGraph graph];
+[graph addRootNode:rootNode];
+}}}
+
+* Note that the graph edges are generated using the GSGraphNode interface. But
+the GSDirectedGraph offers a **view** of the overall graph.
+* There is no limit to how the graph is generated but be mindful of creating
+cycles. Certain traversals in GSDirectedGraph will never finish if cycles
+exist.
+* When a node is added as a child to a parent, the parent node is also added
+as a parent in the child. In other words there are two locations where the edge
+is maintained: the parent and the child.
+
+==== Graph traversal ====
+
+{{{
+#!objectivec
+for( GSGraphNode *node in [graph flat] )
+{
+    node.object = self;
+}
+GSGraphNode *foundNode = [graph nodeForObject:self];
+[graph removeNode:foundNode];
+}}}
+
+* Can view the graph flattened, with every node added depth-first. This avoids
+any cycles in the graph.
+* Can search the graph for a particular contained object. Returns the first
+node found that matches.
+* Can remove any node in the graph. To maintain transitive properties of a
+directed graph, the parent and child nodes of the node are linked together.
+
+=== Multi-value Dictionary ===
+
+GSMultiValueDictionary adds additional functionality to the standard dictionary
+whereby multiple values can be set for a particular key. It inherits from
+NSMutableDictionary and so is always mutable.
+
+{{{
+#!objectivec
+GSMultiValueDictionary *dictionary = [GSMultiValueDictionary dictionary];
+[dictionary setObject:@"val1" forKey:@"key1"];
+[dictionary addObject:@"val2" forKey:@"key1"];
+[dictionary addObjects:[NSArray arrayWithObjects:@"val3", @"val4", nil]
+                forKey:@"key2"];
+NSArray *vals = [dictionary arrayForKey:@"key1"];
+NSArray *moreVals = [dictionary arrayForKey:@"key2"];
+[[vals objectAtIndex:0] isEqual:[dictionary objectForKey:@"key1"]];
+}}}
+
+* -setObject:forKey: always replaces the first element of the value list.
+* Order in which values are entered is maintained.
+* This, in fact, duplicates the CHMultiDictionary class in CHDataStructures,
+but never mind that...
